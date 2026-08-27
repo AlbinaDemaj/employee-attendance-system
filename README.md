@@ -33,6 +33,7 @@ nga zyra.
 - [API-ja](#api-ja)
 - [Skema e databazës](#skema-e-databazës)
 - [Testet](#testet)
+- [Publikimi në Render](#publikimi-në-render)
 - [Probleme të zakonshme](#probleme-të-zakonshme)
 - [Zhvillime të mëtejshme](#zhvillime-të-mëtejshme)
 
@@ -311,6 +312,67 @@ Lint i frontend-it:
 ```bash
 cd frontend && npm run lint
 ```
+
+---
+
+## Publikimi në Render
+
+Projekti është i përgatitur për **Render Free** me dy shërbime, të përshkruara te
+[`render.yaml`](render.yaml) në rrënjë. Databaza është e jashtme — një projekt
+**Supabase Free** në PostgreSQL, sepse Postgres-i falas i Render-it skadon pas 30 ditësh.
+
+| Shërbimi | Lloji | Root | Detaje |
+|---|---|---|---|
+| `prezenca-api` | Web Service (Docker) | `backend` | health check te `/api/health` |
+| `prezenca-web` | Static Site | `frontend` | `npm ci && npm run build` → `dist`, me SPA rewrite |
+
+### Hapat
+
+1. **Supabase** — krijo projekt, pastaj *Project Settings → Database → Connection string*.
+2. **Çelësi i aplikacionit** — gjeneroje lokalisht dhe ruaje:
+   ```bash
+   cd backend && php artisan key:generate --show
+   ```
+3. **Render** — *New → Blueprint*, zgjidh repo-n. Blueprint-i i lexon të dy shërbimet nga `render.yaml`.
+4. **Variablat sekrete** — Render i kërkon me dorë ato që janë shënuar `sync: false`:
+
+   | Variabla | Shërbimi | Vlera |
+   |---|---|---|
+   | `APP_KEY` | api | rezultati i hapit 2 (`base64:...`) |
+   | `DB_URL` | api | URI-ja e Supabase-it |
+   | `APP_URL` | api | `https://prezenca-api.onrender.com` |
+   | `FRONTEND_URL` | api | `https://prezenca-web.onrender.com` |
+   | `SANCTUM_STATEFUL_DOMAINS` | api | `prezenca-web.onrender.com` |
+   | `VITE_API_BASE_URL` | web | `https://prezenca-api.onrender.com` |
+
+   `VITE_API_BASE_URL` duhet të ekzistojë **para** build-it të frontend-it — Vite e ngulit
+   vlerën në bundle. Nëse e ndryshon më vonë, duhet një *Manual Deploy → Clear build cache*.
+
+5. **Të dhënat demo** *(opsionale)* — vendos `RUN_SEEDER=true` te shërbimi i API-t, bëj një
+   deploy, pastaj ktheje menjëherë në `false`. Seed-i i fshin dhe i rikrijon të dhënat.
+
+### Çfarë bën kontejneri në nisje
+
+[`backend/docker/start.sh`](backend/docker/start.sh) krijon dosjet e cache-it, rregullon lejet
+mbi `storage/` dhe `bootstrap/cache/`, ekzekuton `config:clear` dhe `migrate --force`, bën seed
+vetëm kur `RUN_SEEDER=true`, dhe nis serverin në `0.0.0.0:$PORT`. Nëse `APP_KEY` mungon, ndalet
+me mesazh të qartë në vend që të gjenerojë çelës të ri në çdo rinisje.
+
+### Kufizimet e planit Free
+
+- **Fjetja** — shërbimi fle pas ~15 minutash pa trafik; kërkesa e parë pas saj zgjat 30–60 sekonda.
+- **Disku është i përkohshëm** — çdo rinisje e kthen kontejnerin te imazhi fillestar. Prandaj
+  sesionet dhe cache-i shkojnë në databazë, dhe logu te `stderr`.
+- **Certifikatat e ngarkuara humbasin** në çdo rinisje, sepse ruhen te `storage/app/public`.
+  Për përdorim real duhet një disk i përhershëm (plan me pagesë) ose ruajtje e jashtme si S3.
+- **Serveri** — imazhi përdor `php artisan serve`, që mjafton për një instancë të vetme. Për
+  ngarkesë reale duhet nginx + php-fpm ose FrankenPHP.
+
+### Databaza
+
+Aplikacioni punon me **MySQL/MariaDB** lokalisht dhe me **PostgreSQL** në prodhim; migrimet dhe
+query-t janë portative mes të dyve. Lokalisht mjafton `DB_CONNECTION=mysql`, në prodhim
+`DB_CONNECTION=pgsql` plus `DB_URL`.
 
 ---
 

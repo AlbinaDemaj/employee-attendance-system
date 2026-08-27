@@ -7,9 +7,11 @@ use App\Models\Business;
 use App\Models\LeaveRequest;
 use App\Models\Notification;
 use App\Models\User;
+use App\Support\SqlOrder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Te dhena demo per nje produkt SaaS:
@@ -22,15 +24,18 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        Notification::truncate();
-        AttendanceRecord::truncate();
-        LeaveRequest::truncate();
-        User::truncate();
-        DB::table('business_networks')->truncate();
-        Business::truncate();
-        DB::table('personal_access_tokens')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        // `SET FOREIGN_KEY_CHECKS` ekziston vetem ne MySQL. Kjo mbeshtjelle e
+        // perkthen sipas drejtuesit (ne PostgreSQL behet `SET CONSTRAINTS ALL
+        // DEFERRED`), keshtu qe i njejti seeder punon ne te dy databazat.
+        Schema::withoutForeignKeyConstraints(function () {
+            Notification::truncate();
+            AttendanceRecord::truncate();
+            LeaveRequest::truncate();
+            User::truncate();
+            DB::table('business_networks')->truncate();
+            Business::truncate();
+            DB::table('personal_access_tokens')->truncate();
+        });
 
         // ------------------------------------------------- pronari i produktit
         User::create([
@@ -50,7 +55,7 @@ class DatabaseSeeder extends Seeder
         $this->command->table(
             ['Biznesi', 'Roli', 'Email'],
             User::with('business')
-                ->orderByRaw("FIELD(role,'super_admin','admin','manager','employee')")
+                ->orderByRaw(SqlOrder::byValues('role', ['super_admin', 'admin', 'manager', 'employee']))
                 ->orderBy('business_id')
                 ->get()
                 ->map(fn (User $u) => [$u->business?->name ?? '— (platforma)', $u->role, $u->email])

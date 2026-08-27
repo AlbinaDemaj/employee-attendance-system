@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AttendanceRecord;
 use App\Models\Business;
 use App\Models\User;
+use App\Support\SqlOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -125,7 +126,7 @@ class SuperAdminController extends Controller
     {
         $users = $business->users()
             ->with('manager:id,name')
-            ->orderByRaw("FIELD(role, 'admin', 'manager', 'employee')")
+            ->orderByRaw(SqlOrder::byValues('role', ['admin', 'manager', 'employee']))
             ->orderBy('name')
             ->get();
 

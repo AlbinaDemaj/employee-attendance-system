@@ -9,6 +9,7 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Support\LeaveTypeCatalog;
 use App\Support\ReasonCatalog;
+use App\Support\SqlOrder;
 use App\Support\StatusCatalog;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -81,7 +82,7 @@ class AttendanceService
             ->whereIn('status', ['pending', 'approved', 'info_requested'])
             ->whereDate('start_date', '<=', $date->format('Y-m-d'))
             ->whereDate('end_date', '>=', $date->format('Y-m-d'))
-            ->orderByRaw("FIELD(status, 'approved', 'info_requested', 'pending') ASC")
+            ->orderByRaw(SqlOrder::byValues('status', ['approved', 'info_requested', 'pending']).' ASC')
             ->latest('id')
             ->first();
     }

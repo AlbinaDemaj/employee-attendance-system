@@ -7,6 +7,7 @@ use App\Models\LeaveRequest;
 use App\Models\User;
 use App\Services\AttendanceService;
 use App\Support\LeaveTypeCatalog;
+use App\Support\SqlOrder;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,7 +38,7 @@ class LeaveRequestController extends Controller
             $query->where('status', $status);
         }
 
-        $requests = $query->orderByRaw("FIELD(status, 'pending', 'info_requested', 'approved', 'rejected') ASC")
+        $requests = $query->orderByRaw(SqlOrder::byValues('status', ['pending', 'info_requested', 'approved', 'rejected']).' ASC')
             ->latest('id')
             ->limit(200)
             ->get();

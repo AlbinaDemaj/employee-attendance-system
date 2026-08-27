@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\SqlOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -23,7 +24,7 @@ class AdminController extends Controller
             ->where('business_id', $businessId)
             ->with('manager:id,name')
             ->withCount('subordinates')
-            ->orderByRaw("FIELD(role, 'admin', 'manager', 'employee')")
+            ->orderByRaw(SqlOrder::byValues('role', ['admin', 'manager', 'employee']))
             ->orderBy('name')
             ->get();
 

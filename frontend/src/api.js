@@ -1,8 +1,28 @@
 import axios from 'axios'
 
-// Defaults to the Vite proxy (same origin). Set VITE_API_URL in frontend/.env
-// to call the backend directly, e.g. http://127.0.0.1:8000/api
-const baseURL = import.meta.env.VITE_API_URL || '/api'
+// Ne zhvillim kjo lihet bosh dhe kerkesat kalojne te proxy-i i Vite-s, pra
+// mbeten ne te njejten origjine ('/api'). Ne prodhim VITE_API_BASE_URL tregon
+// te backend-i, p.sh. https://prezenca-api.onrender.com
+//
+// Pranohet me ose pa '/api' ne fund, qe te dyja format e zakonshme te punojne.
+// VITE_API_URL mbetet si emer i vjeter, per konfigurimet ekzistuese lokale.
+const apiOrigin = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  ''
+)
+  .trim()
+  .replace(/\/+$/, '')
+  // Nje adresa e ngjitur pa skeme ('api.onrender.com') do te trajtohej si
+  // shteg relativ nga axios-i, prandaj e plotesojme.
+  .replace(/^(?!https?:\/\/)(?=.)/, 'https://')
+
+/** True kur flasim me nje origjine tjeter, jo me proxy-in e Vite-s. */
+export const usesExternalApi = apiOrigin !== ''
+
+const baseURL = usesExternalApi
+  ? (apiOrigin.endsWith('/api') ? apiOrigin : `${apiOrigin}/api`)
+  : '/api'
 
 export const api = axios.create({
   baseURL,
@@ -59,7 +79,9 @@ export function errorMessage(error, fallback = 'Diçka shkoi keq. Provo sërish.
  */
 export function assetUrl(url) {
   if (!url) return null
-  if (import.meta.env.VITE_API_URL) return url
+  // Me nje backend te jashtem URL-ja absolute eshte e sakte ashtu si vjen.
+  if (usesExternalApi) return url
+  // Me proxy-in e Vite-s e duam te njejten origjine, pra mbajme vetem shtegun.
   try {
     return new URL(url).pathname
   } catch {

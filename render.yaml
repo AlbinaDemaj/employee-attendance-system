@@ -1,0 +1,127 @@
+# ---------------------------------------------------------------------------
+# Blueprint i Render-it per Prezencen (monorepo: backend Laravel + frontend React)
+#
+# Perdorimi:  Render Dashboard > New > Blueprint > zgjidh kete repo.
+#
+# Databaza NUK deklarohet ketu me qellim: Postgres-i falas i Render-it skadon
+# pas 30 ditesh. Ne vend te tij perdoret nje projekt Supabase Free dhe
+# kredencialet e tij vendosen si variabla mjedisi (DB_URL me poshte).
+# ---------------------------------------------------------------------------
+
+services:
+  # -------------------------------------------------------------------------
+  # 1. API-ja (Laravel 12, Docker)
+  # -------------------------------------------------------------------------
+  - type: web
+    name: prezenca-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: APP_NAME
+        value: Prezenca
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_TIMEZONE
+        value: Europe/Tirane
+      - key: APP_LOCALE
+        value: sq
+      - key: APP_FALLBACK_LOCALE
+        value: en
+
+      # Gjenerohet lokalisht me `php artisan key:generate --show` dhe vendoset
+      # me dore te paneli. Kurre ne Git.
+      - key: APP_KEY
+        sync: false
+
+      # URL-ja publike e ketij sherbimi, me skeme te plote:
+      # https://prezenca-api.onrender.com
+      # (Vendoset me dore: `fromService ... property: host` do te jepte vetem
+      # hostname-in pa https://, gje qe e prish gjenerimin e URL-ve.)
+      - key: APP_URL
+        sync: false
+
+      # --- Databaza (Supabase) ---------------------------------------------
+      - key: DB_CONNECTION
+        value: pgsql
+      # URI-ja e plote nga Supabase > Project Settings > Database.
+      # Formati: postgresql://user:fjalekalim@host:5432/postgres
+      - key: DB_URL
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+
+      # --- Logs -------------------------------------------------------------
+      # Disku eshte i perkohshem, keshtu qe logu shkon te stderr dhe lexohet
+      # nga paneli i Render-it.
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: warning
+
+      # --- Gjendja ----------------------------------------------------------
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: FILESYSTEM_DISK
+        value: public
+
+      # --- Frontend ---------------------------------------------------------
+      # Origjina e lejuar per CORS. Vendose me dore pasi te dihet adresa e
+      # sherbimit statik, p.sh. https://prezenca-web.onrender.com
+      # (pranohen disa adresa te ndara me presje).
+      - key: FRONTEND_URL
+        sync: false
+      - key: SANCTUM_STATEFUL_DOMAINS
+        sync: false
+
+      # --- Te dhenat demo ---------------------------------------------------
+      # 'true' vetem per nje nisje te vetme, pastaj kthehet ne 'false'.
+      - key: RUN_SEEDER
+        value: "false"
+
+      # --- Sjellja e prezences ----------------------------------------------
+      - key: ATTENDANCE_LATE_GRACE_MINUTES
+        value: "0"
+      - key: ATTENDANCE_MANAGER_ALERT_AFTER_MINUTES
+        value: "15"
+      - key: ATTENDANCE_AUTO_APPROVE_SICK_WITH_CERTIFICATE
+        value: "false"
+
+  # -------------------------------------------------------------------------
+  # 2. Frontend-i (React 19 + Vite, Static Site)
+  # -------------------------------------------------------------------------
+  - type: web
+    name: prezenca-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeployTrigger: commit
+    envVars:
+      # Adresa e API-se, e ngulitur ne build nga Vite (duhet te jete e
+      # pranishme kur ekzekutohet `npm run build`).
+      # Vlera: https://prezenca-api.onrender.com
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      # SPA rewrite: cdo shteg qe nuk eshte skedar real i sherbehet
+      # index.html-se, qe React Router te mos jape 404 pas refresh-it.
+      # (I njejti rregull ndodhet edhe te frontend/public/_redirects.)
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable

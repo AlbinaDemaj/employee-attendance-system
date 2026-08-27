@@ -1,0 +1,3 @@
+# SPA rewrite: cdo shteg qe nuk eshte skedar real i sherbehet index.html-se,
+# qe React Router te mos jape 404 pas nje refresh-i te thelle (p.sh. /login).
+/*    /index.html   200

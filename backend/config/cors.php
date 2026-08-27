@@ -1,28 +1,45 @@
 <?php
 
 /*
- | The React dev server runs on its own origin, so the API has to allow it.
- | Both 127.0.0.1 and localhost are listed because browsers treat them as two
- | different origins (and Edge likes to upgrade "localhost" to https).
+ | Frontend-i xhiron gjithmonë në origjinë tjetër nga API-ja, prandaj duhet
+ | lejuar shprehimisht.
+ |
+ | Në prodhim (Render) origjina vjen nga `FRONTEND_URL`. Aty mund të vendosen
+ | edhe disa adresa të ndara me presje, p.sh. domeni i Render-it bashkë me një
+ | domen tënd:
+ |
+ |   FRONTEND_URL=https://prezenca.onrender.com,https://prezenca.com
+ |
+ | Origjinat lokale shtohen vetëm jashtë prodhimit, që serveri publik të mos
+ | lejojë kurrë `localhost` — me `supports_credentials` të ndezur kjo do të
+ | ishte hapje e panevojshme.
  */
 
-$frontend = env('FRONTEND_URL', 'http://localhost:5173');
+$origins = array_values(array_filter(array_map(
+    'trim',
+    explode(',', (string) env('FRONTEND_URL', 'http://localhost:5173'))
+)));
+
+$isProduction = env('APP_ENV') === 'production';
+
+if (! $isProduction) {
+    $origins = array_merge($origins, [
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+        'http://localhost:4173',
+        'http://127.0.0.1:4173',
+    ]);
+}
 
 return [
     'paths' => ['api/*', 'sanctum/csrf-cookie', 'storage/*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => array_values(array_unique(array_filter([
-        $frontend,
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        'http://localhost:4173',
-        'http://127.0.0.1:4173',
-    ]))),
+    'allowed_origins' => array_values(array_unique($origins)),
 
-    'allowed_origins_patterns' => [
-        // any localhost / 127.0.0.1 port, so a shifted Vite port still works
+    'allowed_origins_patterns' => $isProduction ? [] : [
+        // çdo port i localhost-it, që një port i zhvendosur i Vite-s të punojë
         '#^http://(localhost|127\.0\.0\.1)(:\d+)?$#',
     ],
 
