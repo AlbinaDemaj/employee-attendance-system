@@ -1,0 +1,51 @@
+# ---- Sekretet (kurrë në repo) ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+auth.json
+
+# ---- Varësitë ----
+/backend/vendor/
+/frontend/node_modules/
+node_modules/
+vendor/
+
+# ---- Build-i ----
+/frontend/dist/
+/backend/public/build/
+/backend/public/hot
+/backend/public/storage
+
+# ---- Logs dhe cache ----
+*.log
+.phpunit.result.cache
+.phpunit.cache/
+
+# ---- Editorë / IDE ----
+.idea/
+.vscode/
+.fleet/
+.nova/
+.zed/
+*.suo
+*.sln
+
+# ---- Sisteme operative ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Mjete AI ----
+.claude/
+CLAUDE.md
+.cursor/
+.cursorrules
+.aider*
+.github/copilot-instructions.md
+
+# ---- Të përkohshme ----
+*.tmp
+*.bak
+*~
